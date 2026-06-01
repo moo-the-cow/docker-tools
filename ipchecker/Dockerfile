@@ -1,13 +1,12 @@
 FROM python:3.11-alpine
 
-RUN mkdir -p /data /app
+# Set up directories and pre-create the genuine tracking file
+RUN mkdir -p /data /app && echo "{}" > /data/last_ip.json
+
 WORKDIR /app
 
-# Copy the application source files
-COPY entrypoint.sh /app/entrypoint.sh
+# Copy only the Python application script
 COPY ip_monitor.py /app/ip_monitor.py
 
-# Ensure the entrypoint has execution permissions
-RUN chmod +x /app/entrypoint.sh
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Launch Python directly
+CMD ["python", "-u", "/app/ip_monitor.py"]
