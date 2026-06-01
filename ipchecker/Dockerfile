@@ -1,5 +1,13 @@
 FROM python:3.11-alpine
-RUN mkdir /data
-COPY ip_monitor.py /app/ip_monitor.py
+
+RUN mkdir -p /data /app
 WORKDIR /app
-CMD ["python", "-u", "ip_monitor.py"]
+
+# Copy the application source files
+COPY entrypoint.sh /app/entrypoint.sh
+COPY ip_monitor.py /app/ip_monitor.py
+
+# Ensure the entrypoint has execution permissions
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
