@@ -13,20 +13,25 @@ EMAIL_PASS = os.getenv("EMAIL_PASS")
 EMAIL_TO = os.getenv("EMAIL_TO")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", 1800))
 
-CACHE_FILE = "/data/last_ip.txt"
+CACHE_FILE = "/data/last_ip.json"
 
-def get_current_ip():
+def get_current_ip_payload():
     try:
-        # Querying a lightweight JSON IP endpoint
         req = urllib.request.Request(
             "https://ipify.org", 
             headers={'User-Agent': 'Mozilla/5.0'}
         )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode())
-            return data.get("ip")
+        with urllib.request.urlopen(req, timeout=15) as response:
+            raw_data = response.read().decode('utf-8').strip()
+            
+            # Basic integrity validation
+            if not raw_data.startswith('{'):
+                print(f"Error: API returned non-JSON response: {raw_data[:50]}")
+                return None
+                
+            return json.loads(raw_data)  # Returns the full dict: {"ip": "xxx.xxx.xxx.xxx"}
     except Exception as e:
-        print(f"Error fetching IP: {e}")
+        print(f"Error fetching IP payload: {e}")
         return None
 
 def send_email(old_ip, new_ip):
@@ -36,7 +41,6 @@ def send_email(old_ip, new_ip):
     msg['To'] = EMAIL_TO
 
     try:
-        # Secure SMTP connection using explicit STARTTLS
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
         server.starttls()
         server.login(EMAIL_USER, EMAIL_PASS)
@@ -47,23 +51,35 @@ def send_email(old_ip, new_ip):
         print(f"SMTP Error: Failed to send email: {e}")
 
 def main():
-    print("IP Monitor container started running...")
+    print("IP Monitor container started running (JSON tracking mode)...")
     os.makedirs("/data", exist_ok=True)
     
     while True:
-        current_ip = get_current_ip()
-        if current_ip:
+        current_payload = get_current_ip_payload()
+        
+        if current_payload and "ip" in current_payload:
+            current_ip = current_payload["ip"]
             last_ip = None
-            if os.path.exists(CACHE_FILE):
-                with open(CACHE_FILE, "r") as f:
-                    last_ip = f.read().strip()
             
-            if current_ip != last_ip:
-                print(f"IP Change detected: {last_ip} -> {current_ip}")
-                if last_ip:  # Don't spam on the very first boot
-                    send_email(last_ip, current_ip)
+            # Read and parse existing JSON cache securely
+            if os.path.exists(CACHE_FILE) and os.path.getsize(CACHE_FILE) > 0:
+                try:
+                    with open(CACHE_FILE, "r") as f:
+                        cached_data = json.load(f)
+                        last_ip = cached_data.get("ip")
+                except Exception as e:
+                    print(f"Warning: Could not parse cached JSON file: {e}")
+            
+            # Process state comparisons 
+            if last_ip is None:
+                print(f"Initial boot or empty cache. Saving payload: {current_payload}")
                 with open(CACHE_FILE, "w") as f:
-                    f.write(current_ip)
+                    json.dump(current_payload, f, indent=4)
+            elif current_ip != last_ip:
+                print(f"IP Change detected: {last_ip} -> {current_ip}")
+                send_email(last_ip, current_ip)
+                with open(CACHE_FILE, "w") as f:
+                    json.dump(current_payload, f, indent=4)
             else:
                 print(f"IP unchanged: {current_ip}")
                 
