@@ -10,6 +10,7 @@ SMTP_SERVER = os.getenv("SMTP_SERVER")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 EMAIL_USER = os.getenv("EMAIL_USER")
 EMAIL_PASS = os.getenv("EMAIL_PASS")
+EMAIL_FROM = os.getenv("EMAIL_FROM")  # NEW: Explicit full sender address
 EMAIL_TO = os.getenv("EMAIL_TO")
 CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", 1800))
 
@@ -17,9 +18,8 @@ CACHE_FILE = "/data/last_ip.json"
 
 def get_current_ip_payload():
     try:
-        # CORRECTED URL: Full explicit string with secure HTTP protocol
         req = urllib.request.Request(
-            "https://v4.ipify.io/?format=json", 
+            "https://ipify.io", 
             headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
         )
         with urllib.request.urlopen(req, timeout=15) as response:
@@ -37,14 +37,14 @@ def get_current_ip_payload():
 def send_email(old_ip, new_ip):
     msg = MIMEText(f"Your public WAN IP changed.\nOld IP: {old_ip}\nNew IP: {new_ip}")
     msg['Subject'] = '⚠️ WAN IP Address Changed'
-    msg['From'] = EMAIL_USER
+    msg['From'] = EMAIL_FROM  # FIXED: Now uses the explicit email address string
     msg['To'] = EMAIL_TO
 
     try:
         server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT, timeout=10)
         server.starttls()
-        server.login(EMAIL_USER, EMAIL_PASS)
-        server.sendmail(EMAIL_USER, [EMAIL_TO], msg.as_string())
+        server.login(EMAIL_USER, EMAIL_PASS)  # Continues to login with plain username
+        server.sendmail(EMAIL_FROM, [EMAIL_TO], msg.as_string()) # FIXED: Sender routing address
         server.quit()
         print("Notification email sent successfully.")
     except Exception as e:
