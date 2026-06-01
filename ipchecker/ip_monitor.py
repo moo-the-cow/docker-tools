@@ -17,15 +17,16 @@ CACHE_FILE = "/data/last_ip.json"
 
 def get_current_ip_payload():
     try:
+        # Using a modern browser User-Agent to bypass HTML bot-protection blocks
         req = urllib.request.Request(
             "https://ipify.io", 
-            headers={'User-Agent': 'Mozilla/5.0'}
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
         )
         with urllib.request.urlopen(req, timeout=15) as response:
             raw_data = response.read().decode('utf-8').strip()
             
             if not raw_data.startswith('{'):
-                print(f"Error: API returned non-JSON response: {raw_data[:50]}")
+                print(f"Error: API returned non-JSON response: {raw_data[:200]}")
                 return None
                 
             return json.loads(raw_data)
