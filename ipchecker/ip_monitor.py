@@ -17,19 +17,19 @@ CACHE_FILE = "/data/last_ip.json"
 
 def get_current_ip_payload():
     try:
+        # Explicitly hitting the IPv4-only json endpoint
         req = urllib.request.Request(
-            "https://ipify.org", 
+            "https://v4.ipify.io/?format=json", 
             headers={'User-Agent': 'Mozilla/5.0'}
         )
         with urllib.request.urlopen(req, timeout=15) as response:
             raw_data = response.read().decode('utf-8').strip()
             
-            # Basic integrity validation
             if not raw_data.startswith('{'):
                 print(f"Error: API returned non-JSON response: {raw_data[:50]}")
                 return None
                 
-            return json.loads(raw_data)  # Returns the full dict: {"ip": "xxx.xxx.xxx.xxx"}
+            return json.loads(raw_data)
     except Exception as e:
         print(f"Error fetching IP payload: {e}")
         return None
@@ -51,7 +51,7 @@ def send_email(old_ip, new_ip):
         print(f"SMTP Error: Failed to send email: {e}")
 
 def main():
-    print("IP Monitor container started running (JSON tracking mode)...")
+    print("IP Monitor container started running (IPv4 JSON tracking mode)...")
     os.makedirs("/data", exist_ok=True)
     
     while True:
@@ -61,7 +61,6 @@ def main():
             current_ip = current_payload["ip"]
             last_ip = None
             
-            # Read and parse existing JSON cache securely
             if os.path.exists(CACHE_FILE) and os.path.getsize(CACHE_FILE) > 0:
                 try:
                     with open(CACHE_FILE, "r") as f:
@@ -70,7 +69,6 @@ def main():
                 except Exception as e:
                     print(f"Warning: Could not parse cached JSON file: {e}")
             
-            # Process state comparisons 
             if last_ip is None:
                 print(f"Initial boot or empty cache. Saving payload: {current_payload}")
                 with open(CACHE_FILE, "w") as f:
