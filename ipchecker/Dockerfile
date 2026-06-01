@@ -1,7 +1,8 @@
 FROM python:3.11-alpine
 
 # Set up directories and pre-create the genuine tracking file
-RUN mkdir -p /data /app && echo "{}" > /data/last_ip.json
+RUN mkdir -p /data /app
+#&& echo "{}" > /data/last_ip.json
 
 WORKDIR /app
 
