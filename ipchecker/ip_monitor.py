@@ -17,9 +17,9 @@ CACHE_FILE = "/data/last_ip.json"
 
 def get_current_ip_payload():
     try:
-        # Using a modern browser User-Agent to bypass HTML bot-protection blocks
+        # CORRECTED URL: Full explicit string with secure HTTP protocol
         req = urllib.request.Request(
-            "https://ipify.io", 
+            "https://v4.ipify.io/?format=json", 
             headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
         )
         with urllib.request.urlopen(req, timeout=15) as response:
