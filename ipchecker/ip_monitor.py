@@ -3,7 +3,6 @@ import time
 import urllib.request
 import json
 import smtplib
-import shutil  # Added to safely wipe directory anomalies
 from email.mime.text import MIMEText
 
 # Load configuration from Environment Variables
@@ -52,19 +51,8 @@ def send_email(old_ip, new_ip):
 
 def main():
     print("IP Monitor container started running (IPv4 JSON tracking mode)...")
-    os.makedirs("/data", exist_ok=True)
     
     while True:
-        # SELF-HEALING BLOCK: Fixes Docker creating a directory instead of a file
-        if os.path.exists(CACHE_FILE) and os.path.isdir(CACHE_FILE):
-            print(f"Anomalous folder detected at {CACHE_FILE}. Removing it to initialize file storage...")
-            try:
-                shutil.rmtree(CACHE_FILE)
-            except Exception as e:
-                print(f"Critical: Failed to fix directory anomaly: {e}")
-                time.sleep(CHECK_INTERVAL)
-                continue
-
         current_payload = get_current_ip_payload()
         
         if current_payload and "ip" in current_payload:
