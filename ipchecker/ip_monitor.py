@@ -3,6 +3,7 @@ import time
 import urllib.request
 import json
 import smtplib
+import shutil  # Added to safely wipe directory anomalies
 from email.mime.text import MIMEText
 
 # Load configuration from Environment Variables
@@ -17,9 +18,8 @@ CACHE_FILE = "/data/last_ip.json"
 
 def get_current_ip_payload():
     try:
-        # Explicitly hitting the IPv4-only json endpoint
         req = urllib.request.Request(
-            "https://v4.ipify.io/?format=json", 
+            "https://ipify.io", 
             headers={'User-Agent': 'Mozilla/5.0'}
         )
         with urllib.request.urlopen(req, timeout=15) as response:
@@ -55,6 +55,16 @@ def main():
     os.makedirs("/data", exist_ok=True)
     
     while True:
+        # SELF-HEALING BLOCK: Fixes Docker creating a directory instead of a file
+        if os.path.exists(CACHE_FILE) and os.path.isdir(CACHE_FILE):
+            print(f"Anomalous folder detected at {CACHE_FILE}. Removing it to initialize file storage...")
+            try:
+                shutil.rmtree(CACHE_FILE)
+            except Exception as e:
+                print(f"Critical: Failed to fix directory anomaly: {e}")
+                time.sleep(CHECK_INTERVAL)
+                continue
+
         current_payload = get_current_ip_payload()
         
         if current_payload and "ip" in current_payload:
